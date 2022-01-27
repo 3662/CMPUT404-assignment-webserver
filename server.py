@@ -31,94 +31,77 @@ import os
 
 
 class MyWebServer(socketserver.BaseRequestHandler):
-    
-    def handle(self):
-        redirected = False
-        redirected_url = ""
-        # self.data = self.request.recv(1024).strip()
-        self.data = self.request.recv(1024).decode('utf-8')
-        req = self.data.split(' ')
-        print("method:", req[0])
-        print("file:", req[1])
 
-        method = req[0]
-        file_requested = req[1]
+    def handle(self):
+        self.data = self.request.recv(1024).decode('utf-8')
+        data_request = self.data.split(' ')
+
+        method = data_request[0]
+        file_requested = data_request[1]
 
         if method == "GET":
-            if not file_requested.endswith(".html") and not \
+            final_response = self.handle_get(file_requested)
+
+        else:
+            header = "HTTP/1.1 405 Method Not Allowed\n\n"
+            final_response = header.encode("utf-8")
+
+        self.request.sendall(final_response)
+
+    """
+    handles get requests and return a final response to be sent back to the
+    client
+    """
+    def handle_get(self, file_requested):
+        redirected = False
+        redirected_url = ""
+
+        # correct directory paths not ending with /
+        if not file_requested.endswith(".html") and not \
             file_requested.endswith(".css") and not file_requested.endswith("/"):
                 for root, dirs, files in os.walk("www"):
-                    print(dirs)
                     if file_requested[1:] in dirs:
                         file_requested += "/"
                         redirected = True 
                         redirected_url = file_requested
                         break
 
-            if file_requested[-1] == "/":
-                file_requested += "index.html"
+        # return index.html for directories (paths ending with /)
+        if file_requested[-1] == "/":
+            file_requested += "index.html"
 
-            try:
-                # print("DIRECTORY:", os.getcwd())
-                # all_files = set()
+        # read the requested file
+        try:
+            file_name = "www" + file_requested
 
-                # for root, dirs, files in os.walk("www"):
-                #     print(root)
-                #     print(dirs)
-                #     print(files)
-                #     # for f in files:
-                #     #     all_files.add("/" + f)
-                print(file_requested)
-                print("--------------")
-                # print(all_files)
+            file = open(file_name, "rb")
+            response = file.read()
+            file.close()
 
-                # if file_requested not in all_files:
-                #     print("FILE NOT FOUND")
-                #     raise request.HTTPError("http://127.0.0.1:8080/", 404, "", 1, 4)
-                    
-                # file_name = "D:\\" + os.getcwd() + "www" + file_requested
-                file_name = "www" + file_requested
+            # currently supporting mime-types HTML and CSS
+            if file_name.endswith(".css"):
+                mimetype = "text/css"
+            elif file_name.endswith(".html"):
+                mimetype = "text/html"
+            else:
+                mimetype = ""
 
-                print(file_name)
-                file = open(file_name, "rb")
-                response = file.read()
-                file.close()
+            # returns a status code of 301 if path redirected
+            if redirected:
+                header = "HTTP/1.1 301 REDIRECTED\n"
+                header += 'Location: '+ redirected_url +'\n\n'
+            else:
+                header = "HTTP/1.1 200 OK\n"
+                header += 'Content-Type: '+str(mimetype)+'\n\n'
 
-                print(response)
+        except Exception as e:
+            # if failed to read the requested file
+            header = "HTTP/1.1 404 Not Found\n\n"
+            response = "HTTP/1.1 404 Not Found".encode('utf-8')
 
-                if file_name.endswith(".css"):
-                    mimetype = "text/css"
-                else:
-                    mimetype = "text/html"
+        final_response = header.encode("utf-8") + response 
 
-                if redirected:
-                    header = "HTTP/1.1 301 REDIRECTED\n"
-                    header += 'Location: '+ redirected_url +'\n\n'
-                else:
-                    header = "HTTP/1.1 200 OK\n"
-                    header += 'Content-Type: '+str(mimetype)+'\n\n'
-
-                # if redirected:
-                #     header += 'Location: '+ str("http://www.google.com/") +'\n\n'
-
-            except Exception as e:
-                print("EXCEPT")
-                header = "HTTP/1.1 404 Not Found\n\n"
-                response = "HTTP/1.1 404 Not Found".encode('utf-8')
-
-            final_response = header.encode("utf-8")
-            final_response += response
-
-            # print ("Got a request of: %s\n" % self.data)
-            # self.request.sendall(bytearray("OK la concha",'utf-8'))
-
-        else:
-            header = "HTTP/1.1 405 Method Not Allowed\n\n"
-            final_response = header.encode("utf-8")
-
-        print(final_response)
-        self.request.sendall(final_response)
-
+        return final_response
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
