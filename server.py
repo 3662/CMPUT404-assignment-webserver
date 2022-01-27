@@ -1,5 +1,8 @@
 #  coding: utf-8 
 import socketserver
+from urllib import request
+
+import os
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -30,6 +33,8 @@ import socketserver
 class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
+        redirected = False
+        redirected_url = ""
         # self.data = self.request.recv(1024).strip()
         self.data = self.request.recv(1024).decode('utf-8')
         req = self.data.split(' ')
@@ -40,58 +45,79 @@ class MyWebServer(socketserver.BaseRequestHandler):
         file_requested = req[1]
 
         if method == "GET":
-            if file_requested == "/":
-                file_requested = "/index.html"
+            if not file_requested.endswith(".html") and not \
+            file_requested.endswith(".css") and not file_requested.endswith("/"):
+                for root, dirs, files in os.walk("www"):
+                    print(dirs)
+                    if file_requested[1:] in dirs:
+                        file_requested += "/"
+                        redirected = True 
+                        redirected_url = file_requested
+                        break
 
-            # print(req[1].lstrip("/"))
-            # raise Exception
-
-            # file = open(req[1].lstrip("/"), "rb")
+            if file_requested[-1] == "/":
+                file_requested += "index.html"
 
             try:
+                # print("DIRECTORY:", os.getcwd())
+                # all_files = set()
+
+                # for root, dirs, files in os.walk("www"):
+                #     print(root)
+                #     print(dirs)
+                #     print(files)
+                #     # for f in files:
+                #     #     all_files.add("/" + f)
+                print(file_requested)
+                print("--------------")
+                # print(all_files)
+
+                # if file_requested not in all_files:
+                #     print("FILE NOT FOUND")
+                #     raise request.HTTPError("http://127.0.0.1:8080/", 404, "", 1, 4)
+                    
+                # file_name = "D:\\" + os.getcwd() + "www" + file_requested
                 file_name = "www" + file_requested
+
+                print(file_name)
                 file = open(file_name, "rb")
                 response = file.read()
                 file.close()
 
-                header = "HTTP/1.1 200 OK\n"
+                print(response)
 
                 if file_name.endswith(".css"):
                     mimetype = "text/css"
                 else:
                     mimetype = "text/html"
 
-                header += 'Content-Type: '+str(mimetype)+'\n\n'
+                if redirected:
+                    header = "HTTP/1.1 301 REDIRECTED\n"
+                    header += 'Location: '+ redirected_url +'\n\n'
+                else:
+                    header = "HTTP/1.1 200 OK\n"
+                    header += 'Content-Type: '+str(mimetype)+'\n\n'
+
+                # if redirected:
+                #     header += 'Location: '+ str("http://www.google.com/") +'\n\n'
+
             except Exception as e:
+                print("EXCEPT")
                 header = "HTTP/1.1 404 Not Found\n\n"
-                response = 'HTTP/1.1 404 Not Found'.encode('utf-8')
+                response = "HTTP/1.1 404 Not Found".encode('utf-8')
 
             final_response = header.encode("utf-8")
-            # print(type(final_response))
-            # print(type(response))
-            # raise Exception
             final_response += response
-
-            # print(header)
-            # print(response)
-            # raise Exception
-
-            print(final_response)
-
-            # final_response = final_response.encode("utf-8")
-
-            self.request.sendall(final_response)
 
             # print ("Got a request of: %s\n" % self.data)
             # self.request.sendall(bytearray("OK la concha",'utf-8'))
 
         else:
             header = "HTTP/1.1 405 Method Not Allowed\n\n"
-
             final_response = header.encode("utf-8")
 
-            print(final_response)
-            self.request.sendall(final_response)
+        print(final_response)
+        self.request.sendall(final_response)
 
 
 if __name__ == "__main__":
