@@ -4,7 +4,7 @@ from urllib import request
 
 import os
 
-# Copyright 2013 Abram Hindle, Eddie Antonio Santos
+# Copyright 2022 Abram Hindle, Eddie Antonio Santos, Felipe Rodriguez Atuesta
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,7 +41,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
         if method == "GET":
             final_response = self.handle_get(file_requested)
-
         else:
             header = "HTTP/1.1 405 Method Not Allowed\n\n"
             final_response = header.encode("utf-8")
@@ -110,11 +109,11 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
                 # returns a status code of 301 if path redirected
                 if redirected:
-                    header = "HTTP/1.1 301 REDIRECTED\n"
-                    header += 'Location: '+ redirected_url +'\n\n'
+                    header = "HTTP/1.1 301 Redirected\n"
+                    header += "Location: " + redirected_url + "\n\n"
                 else:
                     header = "HTTP/1.1 200 OK\n"
-                    header += 'Content-Type: '+str(mimetype)+'\n\n'
+                    header += "Content-Type: " + mimetype + "\n\n"
 
             except Exception as e:
                 # if failed to read the requested file
