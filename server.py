@@ -34,20 +34,40 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
     def handle(self):
         self.data = self.request.recv(1024).decode('utf-8')
-        data_request = self.data.split(' ')
+        
+        if self.request_is_correct():
+            # parse the request
+            data_request = self.data.split()
 
-        method = data_request[0]
-        file_requested = data_request[1]
+            method = data_request[0]
+            file_requested = data_request[1]
+            protocol = data_request[2]
 
-        if method == "GET":
-            final_response = self.handle_get(file_requested)
+            if method == "GET":
+                final_response = self.handle_get(file_requested)
+            else:
+                header = "HTTP/1.1 405 Method Not Allowed\n\n"
+                final_response = header.encode("utf-8")
         else:
-            header = "HTTP/1.1 405 Method Not Allowed\n\n"
+            # return a bad request error status
+            header = "HTTP/1.1 400 Bad Request\n\n"
             final_response = header.encode("utf-8")
 
-        # print(final_response)
-
         self.request.sendall(final_response)
+
+    """
+    checks request data. ensure it uses the HTTP 1.1 protocol and has at least
+    method and file requested header
+    """
+    def request_is_correct(self):
+        data_request = self.data.split()
+
+        if len(data_request) < 3:
+            return False
+        if data_request[2] != "HTTP/1.1":
+            return False 
+
+        return True 
 
     """
     handles get requests and return an encoded final response to be sent back 
@@ -58,8 +78,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
         redirected_url = ""
 
         file_name = "www" + file_requested
-
-        # print(file_name)
 
         valid_paths = set()
         valid_paths.add("www")
@@ -73,9 +91,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 valid_paths.add("{}/{}".format(root, f))
 
         if file_name not in valid_paths:
-            # print(file_name)
-            # print(valid_paths)
-
             header = "HTTP/1.1 404 Not Found\n\n"
             response = "HTTP/1.1 404 Not Found".encode('utf-8')
         else:
