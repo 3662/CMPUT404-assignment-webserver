@@ -7,6 +7,13 @@ See requirements.org (plain-text) for a description of the project.
 
 Make a simple webserver.
 
+Colaboration / External Source Code
+========================
+
+No collaboratos.
+
+No external source code was used.
+
 Contributors / Licensing
 ========================
 

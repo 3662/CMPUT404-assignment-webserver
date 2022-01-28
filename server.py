@@ -85,6 +85,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
                     for root, dirs, files in os.walk("www"):
                         if file_requested[1:] in dirs:
                             file_name += "/"
+                            file_requested += "/"
                             redirected = True 
                             redirected_url = file_requested
                             break
