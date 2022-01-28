@@ -46,58 +46,80 @@ class MyWebServer(socketserver.BaseRequestHandler):
             header = "HTTP/1.1 405 Method Not Allowed\n\n"
             final_response = header.encode("utf-8")
 
+        # print(final_response)
+
         self.request.sendall(final_response)
 
     """
-    handles get requests and return a final response to be sent back to the
-    client
+    handles get requests and return an encoded final response to be sent back 
+    to the client
     """
     def handle_get(self, file_requested):
         redirected = False
         redirected_url = ""
 
-        # correct directory paths not ending with /
-        if not file_requested.endswith(".html") and not \
-            file_requested.endswith(".css") and not file_requested.endswith("/"):
-                for root, dirs, files in os.walk("www"):
-                    if file_requested[1:] in dirs:
-                        file_requested += "/"
-                        redirected = True 
-                        redirected_url = file_requested
-                        break
+        file_name = "www" + file_requested
 
-        # return index.html for directories (paths ending with /)
-        if file_requested[-1] == "/":
-            file_requested += "index.html"
+        # print(file_name)
 
-        # read the requested file
-        try:
-            file_name = "www" + file_requested
+        valid_paths = set()
+        valid_paths.add("www")
+        valid_paths.add("www/")
 
-            file = open(file_name, "rb")
-            response = file.read()
-            file.close()
+        for root, dirs, files in os.walk("www"):
+            for d in dirs:
+                valid_paths.add("{}/{}/".format(root, d))
+                valid_paths.add("{}/{}".format(root, d))
+            for f in files:
+                valid_paths.add("{}/{}".format(root, f))
 
-            # currently supporting mime-types HTML and CSS
-            if file_name.endswith(".css"):
-                mimetype = "text/css"
-            elif file_name.endswith(".html"):
-                mimetype = "text/html"
-            else:
-                mimetype = ""
+        if file_name not in valid_paths:
+            # print(file_name)
+            # print(valid_paths)
 
-            # returns a status code of 301 if path redirected
-            if redirected:
-                header = "HTTP/1.1 301 REDIRECTED\n"
-                header += 'Location: '+ redirected_url +'\n\n'
-            else:
-                header = "HTTP/1.1 200 OK\n"
-                header += 'Content-Type: '+str(mimetype)+'\n\n'
-
-        except Exception as e:
-            # if failed to read the requested file
             header = "HTTP/1.1 404 Not Found\n\n"
             response = "HTTP/1.1 404 Not Found".encode('utf-8')
+        else:
+            # correct directory paths not ending with /
+            if not file_requested.endswith(".html") and not \
+                file_requested.endswith(".css") and not file_requested.endswith("/"):
+                    for root, dirs, files in os.walk("www"):
+                        if file_requested[1:] in dirs:
+                            file_name += "/"
+                            redirected = True 
+                            redirected_url = file_requested
+                            break
+
+            # return index.html for directories (paths ending with /)
+            if file_name[-1] == "/":
+                file_name += "index.html"
+
+            # read the requested file
+            try:
+                file = open(file_name, "rb")
+                response = file.read()
+                file.close()
+
+                # currently supporting mime-types HTML and CSS
+                if file_name.endswith(".css"):
+                    mimetype = "text/css"
+                elif file_name.endswith(".html"):
+                    mimetype = "text/html"
+                else:
+                    mimetype = ""
+
+                # returns a status code of 301 if path redirected
+                if redirected:
+                    header = "HTTP/1.1 301 REDIRECTED\n"
+                    header += 'Location: '+ redirected_url +'\n\n'
+                else:
+                    header = "HTTP/1.1 200 OK\n"
+                    header += 'Content-Type: '+str(mimetype)+'\n\n'
+
+            except Exception as e:
+                # if failed to read the requested file
+                header = "HTTP/1.1 404 Not Found\n\n"
+                response = "HTTP/1.1 404 Not Found".encode('utf-8')
 
         final_response = header.encode("utf-8") + response 
 
